@@ -1,0 +1,16 @@
+sorry, very sparse readme
+
+these scripts create scripts based on SVN copies of the books at
+http://www.linuxfromscratch.org/lfs/
+
+They are not really intended for the newbie instead they are for the seasoned lfser
+
+If you are new to linuxfromscratch , work through the book a few times before automating it
+This way you will get a much better understanding of what is installed on your system, how and why.
+
+but I will ( maybe ) document these scripts and the prerequesit steps, and I might even fix them
+
+NOTE these scripts target a
+http://www.linuxfromscratch.org/hints/downloads/files/more_control_and_pkg_man.txt
+package managment 
+
