@@ -314,7 +314,7 @@ case $Pkg in
         links="/usr/share/man/man8/sysklogd.8"
     ;;
     udev)
-        Extra="install -dv /lib/{firmware,udev/devices/pts} && mknod -m0666 /lib/udev/devices/null c 1 3"
+        Extra="install -dv /lib/{firmware,udev/devices/pts} && mknod -m0666 /lib/udev/devices/null c 1 3 && fixSticky"
         links="/lib/{firmware,udev/devices/pts}"
     ;;
     *)
