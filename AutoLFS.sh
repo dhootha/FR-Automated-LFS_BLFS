@@ -297,7 +297,7 @@ case $Pkg in
         Extra=""
         links="/bin/bash"
     ;;
-    07coreutils)
+    coreutils)
         Extra=""
         links="/bin/{cat,echo,false,pwd,stty} /etc/group"
     ;;
