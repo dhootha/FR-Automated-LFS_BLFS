@@ -35,6 +35,7 @@ PkgUsers=/home/pkgusers
 # But be carefull., all to easy to delete them 
 # at least keep a 'backup' of the tarballs 
 
+BuildLog=\$LFS/buildlog.log
 
 # TODO 
 # work in TZ and lang options
@@ -52,6 +53,7 @@ pkgscripts=$pkgscripts
 sourcedir=$sourcedir
 builddir=$builddir
 PkgUsers=$PkgUsers
+BuildLog=$BuildLog
 " >> $Output
 
 CreateBuildDir >> $Output
@@ -201,7 +203,7 @@ chapter06)
     case $Name in
     chroot|kernfs|readjusting|stripping|adjusting|creatingdirs|createfiles)
     cat >> $Output << "EOF"
-if [ -e "/.$Name" ];
+if [ "`grep -q \"$Name\" $BuildLog;echo $?`" == "0" ];
 then
     echo "skipping $Name"
     return
@@ -242,7 +244,7 @@ closefunction () {
 case "$Chapter" in
     chapter05)
         cat >> $Output << "EOF"
-touch ${BuildDir}/.${Name}
+echo ${Name} >> $BuildLog
 }
 EOF
     ;;
@@ -250,14 +252,13 @@ EOF
         case $Name in
             chroot|kernfs|readjusting|adjusting|stripping|creatingdirs|createfiles)
                 cat >> $Output << "EOF"
-touch /.${Name}
+echo ${Name} >> $BuildLog
 }
 EOF
             ;;
             *)
                  cat >> $Output << "EOF"
 touch ~/.${Name}
-fixSticky
 IPS
 EOF
                  resolvelinks
@@ -273,7 +274,8 @@ then
     echo "${Pkg} failed"
     exit 1
 fi
-ldconfig
+if [ "`ldconfig`" = "" ]; then echo "";fi
+fixSticky
 }
 EOF
             ;;
@@ -370,7 +372,7 @@ esac
 
 TestBuilt () {
     cat >> $Output << "EOF"
-if [ -e "${BuildDir}/.${Name}" ];
+if [ "`grep -q \"$Name\" $BuildLog;echo $?`" == "0" ];
 then
     echo "skipping $Name"
     return
@@ -605,7 +607,7 @@ for Script in $LFS/chapter{05,06,06-asroot,06-chroot} ~/LFS-chroot;do
    awk '/_\ \(\)\ \{/ {print $1}' $Output >> $Output
    chmod 700 $Output
 done
-sed s@#!/bin/bash@#!/tools/bin/bash@ -i $LFS/chapter06.sh
+sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's/BuildLog=\$LFS/BuildLog=/' -i $LFS/chapter06.sh
 # remove checks from chapter05 
 sed -e '/make check/d' \
     -e '/make test/d' \
