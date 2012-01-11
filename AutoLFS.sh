@@ -8,19 +8,19 @@
 # ( http://www.linuxfromscratch.org )
 # The actual commands are taken from LFS' svn ''make dump-commands''
 # Q/ Why not just run the dump-commands straight as is?
-# A/   The dumped scripts don't do untar an stuff, + I wanted to use 
+# A/   The dumped scripts don't do untar an stuff, + I wanted to use
 # Matthias S. Benkmann <article at winterdrache dot de> 's  ( excelent )
 # http://www.linuxfromscratch.org/hints/downloads/files/more_control_and_pkg_man.txt
-# 
+#
 # initially I will concentrate on Chapters 5 and 6, and assume downloads are already done
-# 
+#
 
 #
 # Alternatives:
 # =============
 # TBH, I'm kinda reinventing the wheel, there are other Automated solutions for LFS
 # http://www.linuxfromscratch.org/alfs
-# 
+#
 LFS=$LFS
 # TODO test to make sure it is there
 #
@@ -32,17 +32,17 @@ pkgscripts=/etc/pkgusr/scripts
 sourcedir=/Source
 builddir=/build
 PkgUsers=/home/pkgusers
-# But be carefull., all to easy to delete them 
-# at least keep a 'backup' of the tarballs 
+# But be carefull., all to easy to delete them
+# at least keep a 'backup' of the tarballs
 
 BuildLog=\$LFS/buildlog.log
 
-# TODO 
+# TODO
 # work in TZ and lang options
 TZ=$TZ
 TZ="Europe/London"
 paper_size="A4"
-# 
+#
 Header () {
 cat > $Output << "EOF"
 #!/bin/bash -e
@@ -105,11 +105,11 @@ chmod 4750 /tools/libexec/pt_chown
 # As pkgusers have no root powers they get stuck creating ptys for expect which is used in testsuites
 # setting pt_chown suid solves this issue.
 # Restricting execution to root and the install group effectivly means you need root
-# ( as the only way to get to a pkguser is via su from root ) 
+# ( as the only way to get to a pkguser is via su from root )
 # At least that's the plan
 
 cat >> /etc/pkgusr/bash_profile << "BashProfile"
-# 
+#
 complete -o default -o nospace -A user su finger pinky
 export MAKEFLAGS='-j 14'
 export Pkg=$LOGNAME
@@ -130,13 +130,13 @@ for i in `find /bin /sbin /usr /opt /lib /etc /var/lib -type d ! -group install`
    chgrp install $i && chmod g+w,o+t $i
 done
 #TODO - put this some place else
-# this makes sure pkgusers can update dir 
+# this makes sure pkgusers can update dir
 for i in `find /*{,/*}/share/info   -type f -name dir ! -user root \
                                  -o -type f -name dir ! -group install \
                                  -o -type f -name dir ! -perm 664`;do
     chown root:install $i
     chmod 664 $i
-done 
+done
 fixSticky
 chmod 755 /sbin/fixSticky
 /sbin/fixSticky
@@ -166,7 +166,7 @@ Pkg=$Pkg
 BuildDir=\${LFS}\${builddir}/\$FuncName" >> $Output
 case "$Chapter" in
 chapter05)
-    case $Name in 
+    case $Name in
     readjusting|adjusting|stripping|creatingdirs|createfiles)
     cat >> $Output << "EOF"
 BuildDir=~/
@@ -265,7 +265,7 @@ EOF
                  cat >> $Output << "EOF"
 if [ "`grep -q ^$Pkg\: /etc/passwd;echo $?`" != "0" ];
 then
-    add_package_user "$Pkg" $Pkg 10000 20000 $Pkg 10000 20000 
+    add_package_user "$Pkg" $Pkg 10000 20000 $Pkg 10000 20000
 fi
 resolvelinks
 su $Pkg
@@ -279,7 +279,7 @@ fixSticky
 }
 EOF
             ;;
-        esac 
+        esac
     ;;
 esac
 }
@@ -367,7 +367,7 @@ cd `tar vxf ${Pkg}*z* | awk -F\/ 'END{print $1}'`
 }
 EOF
    ;;
-esac 
+esac
 }
 
 TestBuilt () {
@@ -381,7 +381,7 @@ EOF
 }
 
 WriteScript () {
-# Fixup some stuff 
+# Fixup some stuff
 
 case $Name in
     binutils*|gcc*)
@@ -397,7 +397,7 @@ case $Name in
         >> $Output
     ;;
     glibc)
-        # set up glibc's timezone 
+        # set up glibc's timezone
         # + fix the builddir issue
         cat ${lfscommands}/${Chapter}/${LFSScript} \
         | sed -e '/tzselect/d' \
@@ -457,7 +457,7 @@ case $Name in
     gawk|flex)
         # gawk-4.0.0's make check has a race condition, so force jobs to 1
         # hmm, so does flex-2.5.35
-        # 
+        #
         cat ${lfscommands}/${Chapter}/${LFSScript} \
         | sed -e 's/check/-j1 check/' \
         >> $Output
@@ -558,7 +558,7 @@ for Chapter in chapter{05,06};do
       changingowner|kernfs)
           Chapter=`echo $Chapter | sed s/05/06/`
           # changingowner is at the end of chapter 5, but you need to be root
-          # made sense to shift it into chapter06's 'requires root' script 
+          # made sense to shift it into chapter06's 'requires root' script
           Output=$LFS/${Chapter}-asroot.sh
           Function
       ;;
@@ -609,7 +609,7 @@ for Script in $LFS/chapter{05,06,06-asroot,06-chroot} ~/LFS-chroot;do
    chmod 700 $Output
 done
 sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's/BuildLog=\$LFS/BuildLog=/' -i $LFS/chapter06.sh
-# remove checks from chapter05 
+# remove checks from chapter05
 sed -e '/make check/d' \
     -e '/make test/d' \
     -i $LFS/chapter05.sh
