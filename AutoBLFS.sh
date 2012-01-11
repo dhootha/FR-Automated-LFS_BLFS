@@ -180,7 +180,7 @@ EOF
 }
 
 InstallScript () {
-cat > ${pkgscripts}/${Name}.sh << "IPS"
+#cat > ${pkgscripts}/${Name}.sh << "IPS"
 ##!/bin/bash -e
 #IPS
 cat << "EOF"
