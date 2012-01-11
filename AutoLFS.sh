@@ -201,7 +201,7 @@ EOF
 ;;
 chapter06)
     case $Name in
-    chroot|kernfs|readjusting|stripping|adjusting|creatingdirs|createfiles)
+    chroot|kernfs|readjusting|strippingagain|adjusting|creatingdirs|createfiles)
     cat >> $Output << "EOF"
 if [ "`grep -q \"$Name\" $BuildLog;echo $?`" == "0" ];
 then
@@ -226,7 +226,7 @@ EOF
     echo "Name=$Name
 sourcedir=$sourcedir" >> $Output
     case $Name in
-       chroot|revisedchroot|kernfs|readjusting|stripping|adjusting|creatingdirs|createfiles)
+       chroot|revisedchroot|kernfs|readjusting|strippingagain|adjusting|creatingdirs|createfiles)
        ;;
        *)
             unpack >> $Output
@@ -250,7 +250,7 @@ EOF
     ;;
     chapter06)
         case $Name in
-            chroot|kernfs|readjusting|adjusting|stripping|creatingdirs|createfiles)
+            chroot|kernfs|readjusting|adjusting|strippingagain|creatingdirs|createfiles)
                 cat >> $Output << "EOF"
 echo ${Name} >> $BuildLog
 }
@@ -514,11 +514,12 @@ case $Name in
               -e 's/$/"/' \
         >> $Output
         cat >> $Output << "EOF"
+echo "
 #
 # NOTE , if you want to do serious debuging then you don't want to strip
 # instead just skip this copy'n'paste
 #
-# from now on use the ~/LFS-chroot.sh script to enter 
+# from now on use the ~/LFS-chroot.sh script to enter"
 EOF
     ;;
     zlib)
