@@ -575,7 +575,7 @@ for Chapter in chapter{05,06};do
           Output=~/LFS-chroot.sh
           # use this once LFS chapter06  is done, again conditionals added
           cat $LFS/${Chapter}-asroot.sh \
-          | awk '/mount -v/ {printf "if [ \"`grep -q \""$NF" /proc/mounts;echo $?`\" != \"0\" ];\nthen\n    "$0"\nfi\n"}' \
+          | awk '/mount -v/ {printf "if [ \"`grep -q \""$NF"\" /proc/mounts;echo $?`\" != \"0\" ];\nthen\n    "$0"\nfi\n"}' \
           >> $Output
           WriteScript
       ;;
