@@ -1,0 +1,48 @@
+Auto LFS/BLFS
+=============
+
+These scripts create scripts based on SVN copies of the books at
+http://www.linuxfromscratch.org/lfs/
+
+They are not really intended for the newbie, instead they are for the seasoned lfser
+
+If you are new to linuxfromscratch , work through the book a few times before automating it
+This way you will get a much better understanding of what is installed on your system, how and why.
+
+but I will ( maybe ) document these scripts and the prerequesit steps, and I might even fix them
+
+NOTE these scripts target a
+http://www.linuxfromscratch.org/hints/downloads/files/more_control_and_pkg_man.txt
+package managment
+
+CHANGELOG
+=========
+Not got one yet, sorry...
+
+BUGS, ISSUES, FEATURE REQUESTS
+==============================
+https://github.com/Firerat/FR-Automated-LFS_BLFS/issues
+
+TODO
+====
+as of 2012-01-13 :
+* Add wget ( and openssl or GnuTLS-3.0.7, libidn-1.22, Perl Module HTTP::Server, Dante ) to end of chapter06 ready for BLFS
+* Log SVN revision someplace
+* Have the script do make dump-commands ( pre-cleaning old dump )
+* Have the more_control_and_pkg_man as an option
+* Genarate some kind of initial setup config ( for replacables in glibc, groff and chapter07 )
+* check prerequsits ( tools, headers, Envionment vars etc )
+* log timing ( SBUs ) and try to give ETAs
+* Do at least some analysis of test results
+* Randomise root password after shadow is installed
+* modulise the book tweaks ( basically move the stuff in "WriteScript ()" out of the Main script for easier maintance )
+* fix the coreutils tests when not root ( i.e. as a pkguser )
+* Other stuff I forgot or havn't thought of yet
+
+Contact
+=======
+
+email   : firer4t@googlemail.com
+Twitter : @firer4t
+Google+ : meh, they keep locking my accounts
+
