@@ -16,16 +16,17 @@ http://www.linuxfromscratch.org/hints/downloads/files/more_control_and_pkg_man.t
 package managment
 
 CHANGELOG
-=========
+---------
 Not got one yet, sorry...
 
 BUGS, ISSUES, FEATURE REQUESTS
-==============================
+------------------------------
 https://github.com/Firerat/FR-Automated-LFS_BLFS/issues
 
 TODO
-====
-as of 2012-01-13 :
+----
+as of 2012-01-13
+
 * Add wget ( and openssl or GnuTLS-3.0.7, libidn-1.22, Perl Module HTTP::Server, Dante ) to end of chapter06 ready for BLFS
 * Log SVN revision someplace
 * Have the script do make dump-commands ( pre-cleaning old dump )
@@ -43,6 +44,8 @@ Contact
 =======
 
 email   : firer4t@googlemail.com
+
 Twitter : @firer4t
+
 Google+ : meh, they keep locking my accounts
 
