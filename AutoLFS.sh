@@ -22,33 +22,91 @@
 # http://www.linuxfromscratch.org/alfs
 #
 LFS=$LFS
+
 # TODO test to make sure it is there
 #
-lfsbook=~/lfs-book
-lfscommands=~/lfs-commands
+LFS_BOOK_SVN=~/LFS
+#TODO checkout svn repos AutoMagically
+lfsbook=$LFS_BOOK_SVN/BOOK
+DumpedCommands=$LFS/lfs-commands
 
 # the below are relative to installed system ( i.e. without $LFS prefix )
 pkgscripts=/etc/pkgusr/scripts
 sourcedir=/Source
 builddir=/build
 PkgUsers=/home/pkgusers
-# But be carefull., all to easy to delete them
-# at least keep a 'backup' of the tarballs
 
-BuildLog=\$LFS/buildlog.log
+BuildLog=\$LFS/LFS-buildlog.log
+if [ ! -e $BuildLog ]; then
+    touch $BuildLog
+fi
 
-# TODO
-# work in TZ and lang options
-TZ=$TZ
-TZ="Europe/London"
-paper_size="A4"
-#
+Config () {
+cfg=~/.AutoLFS.cfg
+
+if [ -e $cfg ]; then
+    . $cfg
+fi
+
+if [ "$TZ" = "" ]; then
+    TZ=`tzselect`
+    echo "TZ=$TZ" | tee -a $cfg
+fi
+
+if [ "$paper_size" = "" ]; then
+    validpapersizes="`echo {A,B,C,D}{0..7} DL letter legal tabloid ledger statement executive com10 monarch`"
+    echo >&2 "Please select Paper size"
+    select paper_size in $validpapersizes;do
+        case $paper_size in
+           '') echo >&2 "Please enter a number listed above";;
+           ?*) echo >&2 "You have Selected $paper_size";;
+        esac
+        echo >&2 ""
+        echo "Is this correct?"
+        select confirm in Yes No;do
+            case $confirm in
+                '') echo >&2 "Please enter 1 for Yes or 2 for No";;
+                ?*) break
+            esac
+        done
+        case $confirm in
+             No) echo >&2 "Please select Paper size";;
+            Yes) echo "paper_size=$paper_size" | tee -a $cfg
+                 break
+        esac
+
+    done
+fi
+}
+DumpCommands () {
+HOME=`pwd`
+cd $LFS_BOOK_SVN/BOOK
+
+# While here grab some stuff
+SVNINFO="`svn info | awk '{printf $0"|"}'`"
+# Note, tagged | on the end so it can be used as a record separator later
+# e.g.
+#   echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}'
+# will 'reconstitute it
+
+if [ -e "$DumpedCommands" ];
+then
+    rm -vr $DumpedCommands/*
+fi
+
+make DUMPDIR=$DumpedCommands dump-commands
+cd $HOME
+}
+GetCommands () {
+find ${DumpedCommands}/${Chapter}/ -name "*${Name}" -exec cat {} ';'
+}
 Header () {
 cat > $Output << "EOF"
 #!/bin/bash -e
 EOF
 echo "me=\$0
 LFS=$LFS
+SVNINFO=\"$SVNINFO\"
 pkgscripts=$pkgscripts
 sourcedir=$sourcedir
 builddir=$builddir
@@ -387,7 +445,7 @@ case $Name in
     binutils*|gcc*)
         # these create build dirs, which can be a pita if you have a hangover
         # ( mkdir exits none zero and the script exits ) so
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e 's/make -k /make -kj1 /' \
         | awk '{if ($1 == "mkdir")
                     print "if [ ! -e "$NF" ];\nthen\n    "$0"\nfi\n";
@@ -399,7 +457,7 @@ case $Name in
     glibc)
         # set up glibc's timezone
         # + fix the builddir issue
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/tzselect/d' \
               -e 's[\*\*EDITME<xxx>EDITME\*\*['$TZ'[' \
         | awk '{if ($1 == "mkdir")
@@ -410,7 +468,7 @@ case $Name in
         >> $Output
     ;;
     e2fsprogs)
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | awk '{if ($1 == "mkdir")
                     print "if [ ! -e "$NF" ];\nthen\n    "$0"\nfi\n";
                 else
@@ -419,38 +477,38 @@ case $Name in
         >> $Output
     ;;
     bash)
-       cat ${lfscommands}/${Chapter}/${LFSScript} \
+       GetCommands \
         | sed -e '/nobody/d' \
               -e '/--login/d' \
         >> $Output
 
     ;;
     groff)
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e 's/\*\*EDITME<paper_size>EDITME\*\*/'$paper_size'/' \
         >> $Output
     ;;
     gmp)
         # if building for 64bit need to remove config for 32
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/ABI=32/d' \
         >> $Output
     ;;
     procps)
        #
-       cat ${lfscommands}/${Chapter}/${LFSScript} \
+       GetCommands \
         | sed -e '/make install/ i sed -i /ldconfig/d Makefile' \
         >> $Output
     ;;
     stripping)
         # strip always exits with 1, wrap it up in an if to dodge bash's -e flag
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | awk '{if (/strip/) printf "if [ \"`"$0"`\" = \"1\" ];\nthen\n    echo \""$0" done\"\nfi\n";else print $0}' \
         >> $Output
     ;;
     createfiles)
         # we don't want/need to start a new shell just yet
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed '/exec \/tools\/bin\/bash --login +h/d' \
         >> $Output
     ;;
@@ -458,14 +516,14 @@ case $Name in
         # gawk-4.0.0's make check has a race condition, so force jobs to 1
         # hmm, so does flex-2.5.35
         #
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e 's/check/-j1 check/' \
         >> $Output
     ;;
     shadow)
         # don't set root passwd, a pkguser dont haz nuf p0wuz
         # setup shadow pssswd files
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/passwd root/d' \
               -e '/pwconv/ i touch /etc/shadow\nchmod 640 /etc/shadow' \
               -e '/grpconv/ i touch /etc/gshadow\nchmod 640 /etc/shadow' \
@@ -473,19 +531,19 @@ case $Name in
     ;;
     sysklogd)
        # fix the Make file to use the install wrapper and not the default install bin
-       cat ${lfscommands}/${Chapter}/${LFSScript} \
+       GetCommands \
         | awk '{if ($NF == "install" && $1 == "make") $1 = "make\ INSTALL=/usr/lib/pkgusr/install"; print $0}' \
         >> $Output
     ;;
     sysvinit)
         # tries to instal a fifo to /dev/, which is kinda pointless
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/install/ i sed -i '\''s/mknod/echo mknod/'\''  src/Makefile' \
         >> $Output
     ;;
     texinfo)
         # tries, and fails, to clobber /usr/share/info/dir
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/rm -v dir/d' \
               -e 's/dir/dir-/' \
               -e '/dir-/ a cat dir- > dir\nrm dir-' \
@@ -493,12 +551,12 @@ case $Name in
     ;;
     udev)
         # we do these as root
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/install -dv\|mknod/d' \
         >> $Output
     ;;
     vim)
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e 's/make test/make -j1 test/' \
               -e '/:options/d' \
         >> $Output
@@ -506,7 +564,7 @@ case $Name in
     strippingagain)
         # this strip is a little more awkward
         #
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e '/logout/ i echo "Woot\nWe are done, well nearly\ncopy'\''n'\''paste the below\n"' \
               -e 's/^/echo "/' \
               -e 's/\$/\\$/g' \
@@ -524,12 +582,12 @@ EOF
     ;;
     zlib)
         # fix race conditions
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         | sed -e 's/make/make -j1/' \
         >> $Output
     ;;
     *)
-        cat ${lfscommands}/${Chapter}/${LFSScript} \
+        GetCommands \
         >> $Output
     ;;
 esac
@@ -542,17 +600,19 @@ for Script in chapter{05,06,06-asroot,06-chroot}.sh LFS-chroot.sh;do
    done
 done
 }
+
+Start () {
 cleanstart
+
 for Chapter in chapter{05,06};do
    Output=$LFS/${Chapter}.sh
    Header
-   for LFSScript in `ls ${lfscommands}/${Chapter}`;do
-      Name=$( echo $LFSScript | sed -e s/^...-// )
+   for Name in $( awk -F\" '/href/ && !/<!--/ {gsub(/\.xml/,"");print $(NF -1)}' ${lfsbook}/${Chapter}/${Chapter}.xml );do
       FuncName=$( echo $Name | sed -e s/-//g )
       Pkg=$( echo $Name | sed -e s/pass.$// -e s/-$// )
       Output=$LFS/${Chapter}.sh
       case $Name in
-          generalinstructions|pkgmgt)
+          introduction|toolchaintechnotes|generalinstructions|pkgmgt|aboutdebug)
           continue
       ;;
       changingowner|kernfs)
@@ -613,3 +673,7 @@ sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's/BuildLog=\$LFS/BuildLog=/' -i $LFS
 sed -e '/make check/d' \
     -e '/make test/d' \
     -i $LFS/chapter05.sh
+}
+Config
+DumpCommands
+Start
