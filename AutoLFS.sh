@@ -230,7 +230,7 @@ for REPO in LFS BLFS;do
               fi
           ;;
           ?*) # tags should only need to be checked out once
-              if [ ! -e ${Dir}/$Tagi/.svn/entries ]; then
+              if [ ! -e ${Dir}/$Tag/.svn/entries ]; then
                   svn co $Url ${Dir}/$Tag
               fi
           ;;
