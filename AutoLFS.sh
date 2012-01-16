@@ -2,7 +2,7 @@
 #
 # TODO add license , GPL or probably DTFWYW
 #
-# 2011 , Firer4t@googlemail.com
+# 2011-12, 2012-01 , Firer4t@googlemail.com
 #
 # This shell script shall create full install scripts for LFS
 # ( http://www.linuxfromscratch.org )
@@ -25,10 +25,8 @@ LFS=$LFS
 
 # TODO test to make sure it is there
 #
-LFS_BOOK_SVN=~/LFS
-#TODO checkout svn repos AutoMagically
-lfsbook=$LFS_BOOK_SVN/BOOK
 DumpedCommands=$LFS/lfs-commands
+Dumpedhtml=$LFS/lfs-html
 
 # the below are relative to installed system ( i.e. without $LFS prefix )
 pkgscripts=/etc/pkgusr/scripts
@@ -36,33 +34,30 @@ sourcedir=/Source
 builddir=/build
 PkgUsers=/home/pkgusers
 
-BuildLog=\$LFS/LFS-buildlog.log
+BuildLog=$LFS/LFS-buildlog.log
 if [ ! -e $BuildLog ]; then
     touch $BuildLog
 fi
 
+
 Config () {
-cfg=~/.AutoLFS.cfg
-
-if [ -e $cfg ]; then
-    . $cfg
-fi
-
+GetTimezone () {
 if [ "$TZ" = "" ]; then
-    TZ=`tzselect`
+    TZ=`$( which tzselect | sed 's@/tools@/usr@' )` # horrid workaround TODO fix it
     echo "TZ=$TZ" | tee -a $cfg
 fi
-
+}
+GetPapersize () {
 if [ "$paper_size" = "" ]; then
     validpapersizes="`echo {A,B,C,D}{0..7} DL letter legal tabloid ledger statement executive com10 monarch`"
-    echo >&2 "Please select Paper size"
+    PS3="Please select Paper size : "
     select paper_size in $validpapersizes;do
         case $paper_size in
            '') echo >&2 "Please enter a number listed above";;
            ?*) echo >&2 "You have Selected $paper_size";;
         esac
         echo >&2 ""
-        echo "Is this correct?"
+        PS3="Is this correct? : "
         select confirm in Yes No;do
             case $confirm in
                 '') echo >&2 "Please enter 1 for Yes or 2 for No";;
@@ -70,20 +65,182 @@ if [ "$paper_size" = "" ]; then
             esac
         done
         case $confirm in
-             No) echo >&2 "Please select Paper size";;
+             No) PS3="Please select Paper size (Enter to refresh list) : ";;
             Yes) echo "paper_size=$paper_size" | tee -a $cfg
                  break
         esac
-
     done
 fi
 }
-DumpCommands () {
-HOME=`pwd`
-cd $LFS_BOOK_SVN/BOOK
+DefaultSVN () {
+#TODO if exists prompt for deletion (maybe)
+install -vd $DefaultSVNLoc
+echo "${REPO}_REPO=$DefaultSVNLoc" >> $cfg
+}
+GetLocalREPO () {
+eval TEST_REPO=\$${REPO}_REPO
+if [ "$TEST_REPO" != "" ];
+then
+    return
+fi
+echo >&2 "Local $REPO is not set"
+PS3="What would you like to do? : "
+select Action in \
+    'Create local SVN repo' \
+    'Use existing local SVN repo'
+do
+    case $Action in
+    '') echo >&2 "Please select a numbered option";;
+    ?*) case $Action in
+        Create*) DefaultSVN;break
+        ;;
+        Use*)
+            # build list of potential LFS svn repos ) only works relative to ~/
+            unset Paths
+            for Path in $( find $HOME -name index.xml -exec dirname {} ';' );do
+            if [ -e $Path/.svn ];
+            then
+                Paths="$Paths $Path"
+            fi
+            done
+            PathCount=$( echo $Paths | awk '{print NF}' )
+            case $PathCount in
+            0)  echo >&2 "Couldn't find any local svn repos ( containing index.xml )"
+                echo >&2 "But I only checked ~/"
+                echo >&2 "I will setup 'my own', but should you wish to you can edit $cfg"
+                DefaultSVN;break
+            ;;
+            1) Path=$Paths
+               svn info $Path >&2
+               PS3="Is this correct? : "
+               select confirm in Yes No;do
+                   case $confirm in
+                       '') echo >&2 "Please enter 1 for Yes or 2 for No";;
+                       ?*) break
+                   esac
+               done
+               case $confirm in
+                    No) PS3="What would you like to do? : ";;
+                   Yes) echo "${REPO}_REPO=$Path" | tee -a $cfg
+                        break
+               esac
+            ;;
+            *)
+                PS3="which is your $REPO svn repo? : "
+                select Path in $( echo $Paths | sed 's@'$HOME'@~@g');do
+                    Path=$( echo $Path | sed 's@~@'$HOME'@' )
+                    case $Path in
+                    '') >&2 "Please select using number";;
+                    ?*) echo >&2 "You have selected svn repo"
+                        svn info $Path >&2
+                        PS3="Is this correct? : "
+                        select confirm in Yes No;do
+                            case $confirm in
+                                '') echo >&2 "Please enter 1 for Yes or 2 for No";;
+                                ?*) break
+                            esac
+                        done
+                        case $confirm in
+                             No) PS3="What would you like to do? : ";;
+                            Yes) echo "${REPO}_REPO=$Path" | tee -a $cfg
+                                 break
+                        esac
+                    break
+                    esac
+                done
+            ;;
+            esac
+        ;;
+        esac
+    ;;
+    esac
+    case $confirm in
+    Yes) break;;
+     No) PS3="What would you like to do? : "
+esac
+done
+}
+GetSVN () {
+eval TEST_REPO=\$${REPO}_SVN_URL
+if [ "$TEST_REPO" != "" ];
+then
+    return
+fi
+SVN_URL="svn://svn.linuxfromscratch.org"
+Ignore="bootscripts"
 
-# While here grab some stuff
-SVNINFO="`svn info | awk '{printf $0"|"}'`"
+PS3="Please select the book version : "
+select TAG in 'Current Development' $( svn ls ${SVN_URL}/${REPO}/tags | grep -vE "$Ignore" );do
+    case $TAG in
+    '') echo >&2 "Please select a numbered option";;
+    Current*)
+        BOOK_SVN_URL="${SVN_URL}/${REPO}/trunk/BOOK"
+    ;;
+    ?*) BOOK_SVN_URL="${SVN_URL}/${REPO}/tags/$TAG"
+    ;;
+    esac
+    echo >&2 "You have selected \'$TAG\'"
+    echo >&2 "$BOOK_SVN_URL"
+    PS3="Is this correct? : "
+    select confirm in Yes No;do
+        case $confirm in
+            '') echo >&2 "Please enter 1 for Yes or 2 for No";;
+            ?*) break
+        esac
+    done
+    case $confirm in
+         No) PS3="Please select the book version : ";;
+        Yes) echo "${REPO}_SVN_URL=\"$BOOK_SVN_URL\"" | tee -a $cfg
+             break
+    esac
+done
+}
+#Gawd, that is a mess
+cfg=~/.AutoLFS.cfg
+if [ -e $cfg ]; then
+    . $cfg
+fi
+
+# TODO Tidy up this mess
+
+GetTimezone
+GetPapersize
+
+for REPO in LFS BLFS;do
+    DefaultSVNLoc=$HOME/LFS_SVN/$REPO
+    GetLocalREPO
+    GetSVN
+done
+# make sure we have sourced the config we have written
+. $cfg
+}
+CheckoutSVN () {
+for REPO in LFS BLFS;do
+    eval Dir=\$${REPO}_REPO
+    eval Url=\$${REPO}_SVN_URL
+    Tag=$( basename $Url )
+    case $Tag in
+        BOOK) # don't spam, once a day should be fine
+              # TODO stay locked to a revision
+              if [ "$( date +%Y%m%d )" -gt "$( stat --printf=%y ${Dir}/.svn/entries | awk 'gsub(/-/,"") {printf $1}' )" ];
+              then
+                  echo svn co $Url ${Dir}/WIP
+              else
+                  echo rock on
+              fi
+          ;;
+          ?*) # tags should only need to be checked out once
+              if [ ! -e ${Dir}/$Tagi/.svn/entries ]; then
+                  svn co $Url ${Dir}/$Tag
+              fi
+          ;;
+    esac
+done
+}
+DumpCommands () {
+# for the moment only interested in LFS
+Tag=$( basename $LFS_SVN_URL )
+SVNINFO="`svn info $LFS_REPO/$Tag | awk '{printf $0"|"}'`"
 # Note, tagged | on the end so it can be used as a record separator later
 # e.g.
 #   echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}'
@@ -93,9 +250,8 @@ if [ -e "$DumpedCommands" ];
 then
     rm -vr $DumpedCommands/*
 fi
-
-make DUMPDIR=$DumpedCommands dump-commands
-cd $HOME
+# TODO dump the html to $LFS
+make -f $LFS_REPO/$Tag/Makefile -C $LFS_REPO/$Tag DUMPDIR=$DumpedCommands dump-commands
 }
 GetCommands () {
 find ${DumpedCommands}/${Chapter}/ -name "*${Name}" -exec cat {} ';'
@@ -490,6 +646,7 @@ case $Name in
     ;;
     gmp)
         # if building for 64bit need to remove config for 32
+        # TODO fix this
         GetCommands \
         | sed -e '/ABI=32/d' \
         >> $Output
@@ -668,12 +825,18 @@ for Script in $LFS/chapter{05,06,06-asroot,06-chroot} ~/LFS-chroot;do
    awk '/_\ \(\)\ \{/ {print $1}' $Output >> $Output
    chmod 700 $Output
 done
-sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's/BuildLog=\$LFS/BuildLog=/' -i $LFS/chapter06.sh
+sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's/BuildLog='$LFS'/BuildLog=/' -i $LFS/chapter06.sh
 # remove checks from chapter05
 sed -e '/make check/d' \
     -e '/make test/d' \
     -i $LFS/chapter05.sh
 }
+
+
+
+
+
 Config
+CheckoutSVN
 DumpCommands
 Start

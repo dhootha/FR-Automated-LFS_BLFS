@@ -17,7 +17,11 @@ package managment
 
 CHANGELOG
 ---------
-Not got one yet, sorry...
+2012-01-16
+* added config for TZ, Papersize, Local SVN repos, Book version to checkout
+* added svn checkout ( 'one time' co for tags, + only update development once a day )
+* snapshot of SVN revision ( started it anyway )
+* probably broke stuff
 
 BUGS, ISSUES, FEATURE REQUESTS
 ------------------------------
