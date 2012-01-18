@@ -703,7 +703,7 @@ case $Name in
     sysklogd)
        # fix the Make file to use the install wrapper and not the default install bin
        GetCommands \
-        | awk '{if ($NF == "install" && $1 == "make") $1 = "make\ INSTALL=/usr/lib/pkgusr/install"; print $0}' \
+        | awk '{if ($NF == "install" && $1 == "make") $1 = "make INSTALL=/usr/lib/pkgusr/install"; print $0}' \
         >> $Output
     ;;
     sysvinit)
@@ -839,7 +839,7 @@ for Script in $LFS/chapter{05,06,06-asroot,06-chroot} ~/LFS-chroot;do
    awk '/_\ \(\)\ \{/ {print $1}' $Output >> $Output
    chmod 700 $Output
 done
-sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's/BuildLog='$LFS'/BuildLog=/' -i $LFS/chapter06.sh
+sed -e s@#!/bin/bash@#!/tools/bin/bash@ -e 's@BuildLog='$LFS'@BuildLog=@' -i $LFS/chapter06.sh
 # remove checks from chapter05
 sed -e '/make check/d' \
     -e '/make test/d' \
