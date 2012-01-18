@@ -247,6 +247,10 @@ done
 DumpCommands () {
 # for the moment only interested in LFS
 Tag=$( basename $LFS_SVN_URL )
+case $Tag in
+    BOOK) Tag=WIP
+    ;;
+esac
 SVNINFO="`svn info $LFS_REPO/$Tag | awk '{printf $0"|"}'`"
 # Note, tagged | on the end so it can be used as a record separator later
 # e.g.
