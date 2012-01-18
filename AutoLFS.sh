@@ -222,19 +222,26 @@ for REPO in LFS BLFS;do
     case $Tag in
         BOOK) # don't spam, once a day should be fine
               # TODO stay locked to a revision
-              if [ "$( date +%Y%m%d )" -gt "$( stat --printf=%y ${Dir}/.svn/entries | awk 'gsub(/-/,"") {printf $1}' )" ];
+              Tag=WIP
+              eval ${REPO}_BOOK=\$${REPO}_REPO/$Tag
+              if [ -e ${Dir}/$Tag/.svn/entries ];
               then
-                  echo svn co $Url ${Dir}/WIP
-              else
-                  echo rock on
+                  EntriesDate=$( stat --printf=%y ${Dir}/$Tag/.svn/entries | awk 'gsub(/-/,"") {printf $1}' )
+                  if [ "$EntriesDate" -le "$( date +%Y%m%d )" ];
+                  then
+                      continue
+                  fi
               fi
           ;;
           ?*) # tags should only need to be checked out once
-              if [ ! -e ${Dir}/$Tag/.svn/entries ]; then
-                  svn co $Url ${Dir}/$Tag
+              if [ ! -e ${Dir}/$Tag/.svn/entries ];
+              then
+                  eval ${REPO}_BOOK=\$${REPO}_REPO/$Tag
+                  continue
               fi
           ;;
     esac
+svn co $Url ${Dir}/$Tag
 done
 }
 DumpCommands () {
@@ -764,7 +771,7 @@ cleanstart
 for Chapter in chapter{05,06};do
    Output=$LFS/${Chapter}.sh
    Header
-   for Name in $( awk -F\" '/href/ && !/<!--/ {gsub(/\.xml/,"");print $(NF -1)}' ${lfsbook}/${Chapter}/${Chapter}.xml );do
+   for Name in $( awk -F\" '/href/ && !/<!--/ {gsub(/\.xml/,"");print $(NF -1)}' ${LFS_BOOK}/${Chapter}/${Chapter}.xml );do
       FuncName=$( echo $Name | sed -e s/-//g )
       Pkg=$( echo $Name | sed -e s/pass.$// -e s/-$// )
       Output=$LFS/${Chapter}.sh
