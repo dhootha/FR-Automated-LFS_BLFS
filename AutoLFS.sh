@@ -256,13 +256,16 @@ SVNINFO="`svn info $LFS_REPO/$Tag | awk '{printf $0"|"}'`"
 # e.g.
 #   echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}'
 # will 'reconstitute it
-
-if [ -e "$DumpedCommands" ];
-then
-    rm -vr $DumpedCommands/*
-fi
-# TODO dump the html to $LFS
-make -f $LFS_REPO/$Tag/Makefile -C $LFS_REPO/$Tag DUMPDIR=$DumpedCommands dump-commands
+for dir in $DumpedCommands $Dumpedhtml;do
+    if [ -e "$dir" ];
+    then
+        rm -vr $dir
+    fi
+done
+pushd $LFS_REPO/$Tag
+    make BASEDIR=$Dumpedhtml
+    make DUMPDIR=$DumpedCommands dump-commands
+popd
 }
 GetCommands () {
 find ${DumpedCommands}/${Chapter}/ -name "*${Name}" -exec cat {} ';'
