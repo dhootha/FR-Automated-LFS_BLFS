@@ -156,15 +156,6 @@ for i in `find $commands -type f -name "???-${FullName}"`;do
    echo "}" >> $Output
    echo "#End $i"
 done
-#TODO fix the below, it will be much better to pull from the book instead of having to dump_commands
-#sed -e '/<screen><userinput>/,/<.userinput><.screen>/!d' \
-#    -e 's/<.*serinput>//g' \
-#    -e 's/<.*creen>//g' \
-#    -e 's/&amp;/&/g' \
-#    -e 's/&lt;/</g' \
-#    -e 's/&gt;/>/g' \
-#$Pkg \
-#| awk '/gsub(/&amp;/,"&"){print}'
 }
 
 InstallPkgUser () {
