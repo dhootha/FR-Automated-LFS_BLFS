@@ -28,6 +28,8 @@ LFS=$LFS
 DumpedCommands=$LFS/lfs-commands
 Dumpedhtml=$LFS/lfs-html
 
+WgetOpts="" # Options for wget, e.g. proxy settings etc
+
 # the below are relative to installed system ( i.e. without $LFS prefix )
 pkgscripts=/etc/pkgusr/scripts
 sourcedir=/Source
@@ -266,6 +268,45 @@ pushd $LFS_REPO/$Tag
     make BASEDIR=$Dumpedhtml
     make DUMPDIR=$DumpedCommands dump-commands
 popd
+}
+GetSource () {
+#TODO put this in the chapter05 Script
+make -f $LFS_REPO/$Tag/Makefile -C $LFS_REPO/$Tag BASEDIR=${LFS}${sourcedir} wget-list md5sums
+WgetList=${LFS}${sourcedir}/wget-list
+md5sums=${LFS}${sourcedir}/md5sums
+
+# Move `out of date` tarballs
+SourceArchive=$LFS/Source_Old
+#TODO option to delete old stuff instead of moving it
+
+# Future TODO, option to checkout src from some cvs repo
+for File in $( ls ${LFS}${sourcedir} );do
+   case $File in
+     more_control_*|wget-list|md5sums) continue;;
+     ?*)
+       if [ "$( grep -q $File $WgetList ; echo $? )" = "1" ];
+       then
+           install -vd $SourceArchive
+           mv -v ${LFS}${sourcedir}/$File $SourceArchive/$File
+       fi
+   esac
+done
+pushd ${LFS}${sourcedir}
+    RequiredFiles=$( md5sum --quiet -c $md5sums 2> /dev/null | awk -F\: '!/OK/{printf "%s ",$1}' )
+popd
+for File in $RequiredFiles;do
+    Url=$( grep $File $WgetList )
+    wget $WgetOpts -c $Url -O ${LFS}${sourcedir}/$File
+    # TODO handle d/l error
+done
+# undo symlink fudge
+find ${LFS}${sourcedir} -type l -exec rm {} ';'
+# redo symlink fudge
+case $( ls ${LFS}${sourcedir} ) in
+    linux-*) ln -s $File ${LFS}${sourcedir}/linux-headers.tar.$( echo $File | awk -F\. '{print $NF}' );;
+    xz-*) ln -s $File ${LFS}${sourcedir}/xz-utils-.tar.$( echo $File | awk -F\. '{print $NF}' );;
+esac
+# TODO, maybe make the symlink fudge redundent
 }
 GetCommands () {
 find ${DumpedCommands}/${Chapter}/ -name "*${Name}" -exec cat {} ';'
@@ -853,4 +894,5 @@ sed -e '/make check/d' \
 Config
 CheckoutSVN
 DumpCommands
+GetSource
 Start
