@@ -22,7 +22,7 @@ for File in $Downloads $Patches;do
    # suppose I could grab the md5sum and test that
    if [ ! -e ${BLFSsrc}/`basename $File` ];
    then
-       wget --no-proxy -c $File -O ${BLFSsrc}/`basename $File`
+       wget -c $File -O ${BLFSsrc}/`basename $File`
        ln -sf ${BLFSsrc}/`basename $File` .
    fi
 done
@@ -201,7 +201,6 @@ cat << "EOF"
 GetFiles
 UnPack
 commands
-/sbin/fixSticky
 touch ~/.$LOGNAME
 echo $LOGNAME | sed s'/-/_/g' >> /etc/pkgusr/Installed
 IPS
@@ -295,6 +294,7 @@ for Pkg in $Pkgs;do
     InstallPkgUser >> $Output
     InstallScript >> $Output
     echo "InstallPkgUser" >> $Output
+    echo "fixSticky" >> $Output
     echo "ldconfig" >> $Output
     echo "}" >> $Output
     echo "#End_${FuncName}" >> $Output

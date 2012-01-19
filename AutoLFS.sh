@@ -22,9 +22,32 @@
 # http://www.linuxfromscratch.org/alfs
 #
 LFS=$LFS
+if [ ! -d $LFS -o "$LFS" = "" ];
+then
+    echo "'$LFS' is not a directory"
+    echo "did you forget to export LFS?"
+    echo
+    exit 1
+fi
 
-# TODO test to make sure it is there
-#
+# make sure we have a tools dir, and a synlink to it
+if [ -e $LFS/tools -a ! -d $LFS/tools ];
+then
+    echo "Not sure what $LFS/tools is.."
+    mv -v $LFS/tools $LFS/tools.backup
+    echo "So I moved it"
+fi
+install -vd $LFS/tools
+if [ "$LFS/tools" != "$( ls -l /tools | awk '{print $NF}' )" ];
+then
+    echo "/tools does not appear to be a symlink to $LFS/tools"
+    echo ""
+    echo "As / is ( or should be ) owned by root do the followind as root"
+    echo ""
+    echo "    ln -s $LFS/tools /tools"
+    exit 1
+fi
+
 DumpedCommands=$LFS/lfs-commands
 Dumpedhtml=$LFS/lfs-html
 
