@@ -341,10 +341,12 @@ done
 # undo symlink fudge
 find ${LFS}${sourcedir} -type l -exec rm {} ';'
 # redo symlink fudge
-case $( ls ${LFS}${sourcedir} ) in
-    linux-*) ln -s $File ${LFS}${sourcedir}/linux-headers.tar.$( echo $File | awk -F\. '{print $NF}' );;
-    xz-*) ln -s $File ${LFS}${sourcedir}/xz-utils-.tar.$( echo $File | awk -F\. '{print $NF}' );;
-esac
+for File in $( ls ${LFS}${sourcedir} );do
+    case $File in
+        linux-*) ln -s $File ${LFS}${sourcedir}/linux-headers.tar.$( echo $File | awk -F\. '{print $NF}' );;
+        xz-*) ln -s $File ${LFS}${sourcedir}/xz-utils-.tar.$( echo $File | awk -F\. '{print $NF}' );;
+    esac
+done
 # TODO, maybe make the symlink fudge redundent
 }
 GetCommands () {
