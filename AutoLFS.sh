@@ -325,7 +325,7 @@ esac
 # TODO, maybe make the symlink fudge redundent
 }
 GetCommands () {
-find ${DumpedCommands}/${Chapter}/ -name "*${Name}" -exec cat {} ';'
+find ${DumpedCommands}/${Chapter}/ -name "*-${Name}" -exec cat {} ';'
 }
 Header () {
 cat > $Output << "EOF"
