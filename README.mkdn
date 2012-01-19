@@ -18,6 +18,13 @@ package managment
 CHANGELOG
 ---------
 
+2012-01-19
+----------
+
+* Fixed some bugs introduced in recent commits
+* added GetSource function to AutoLFS.sh
+
+
 2012-01-16
 ----------
 
