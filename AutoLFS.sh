@@ -258,16 +258,32 @@ SVNINFO="`svn info $LFS_REPO/$Tag | awk '{printf $0"|"}'`"
 # e.g.
 #   echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}'
 # will 'reconstitute it
-for dir in $DumpedCommands $Dumpedhtml;do
-    if [ -e "$dir" ];
+SVNrevision=$( echo $SVNINFO | awk 'BEGIN{ RS = "|" };/Revision/ {print $0}' )
+#for dir in $DumpedCommands $Dumpedhtml;do
+for dir in $DumpedCommands ;do
+    if [ ! -d $dir ];
     then
-        rm -vr $dir
+        install -vd $dir
+        touch $dir/.version
     fi
 done
-pushd $LFS_REPO/$Tag
-    make BASEDIR=$Dumpedhtml
-    make DUMPDIR=$DumpedCommands dump-commands
-popd
+#for dir in $DumpedCommands $Dumpedhtml;do
+for dir in $DumpedCommands ;do
+    if [ -e "$dir" -a "$SVNrevision" != "$( cat $dir/.version | awk '/Revision/ {print $0}')" ];
+    then
+        rm -r $dir
+        install -vd $dir
+        pushd $LFS_REPO/$Tag
+            #make BASEDIR=$Dumpedhtml
+            make DUMPDIR=$DumpedCommands maketar dump-commands
+            #for dir in $DumpedCommands $Dumpedhtml;do
+            for dir in $DumpedCommands ;do
+                echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}' > $dir/.version
+            done
+        popd
+        break
+    fi
+done
 }
 GetSource () {
 #TODO put this in the chapter05 Script
