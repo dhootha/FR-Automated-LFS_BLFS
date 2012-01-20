@@ -473,7 +473,9 @@ echo "${FuncName}_ () {
 FuncName=$FuncName
 Name=$Name
 Pkg=$Pkg
-BuildDir=\${LFS}\${builddir}/\$FuncName" >> $Output
+BuildDir=\${LFS}\${builddir}/\$FuncName
+starttime=\$( date +%s )
+" >> $Output
 case "$Chapter" in
 chapter05)
     case $Name in
@@ -528,7 +530,8 @@ then
     return
 fi
 
-cat > ${pkgscripts}/${Name}.sh << "IPS"
+echo "BuildLog=$BuildLog" > ${pkgscripts}/${Name}.sh
+cat >> ${pkgscripts}/${Name}.sh << "IPS"
 Pkg=$LOGNAME
 EOF
     ;;
@@ -554,7 +557,11 @@ closefunction () {
 case "$Chapter" in
     chapter05)
         cat >> $Output << "EOF"
-echo ${Name} >> $BuildLog
+endtime=$( date +%s )
+set +e
+elapsedtime=$( expr $endtime - $starttime )
+set -e
+echo "${Name} $unpacktime $elapsedtime" >> $BuildLog
 }
 EOF
     ;;
@@ -562,13 +569,22 @@ EOF
         case $Name in
             chroot|kernfs|readjusting|adjusting|strippingagain|creatingdirs|createfiles)
                 cat >> $Output << "EOF"
-echo ${Name} >> $BuildLog
+endtime=$( date +%s )
+set +e
+elapsedtime=$( expr $endtime - $starttime )
+set -e
+echo "${Name} $unpacktime $elapsedtime" >> $BuildLog
 }
 EOF
             ;;
             *)
                  cat >> $Output << "EOF"
 touch ~/.${Name}
+endtime=$( date +%s )
+set +e
+elapsedtime=$( expr $endtime - $starttime )
+set -e
+echo "${Name} $unpacktime $elapsedtime" >> $BuildLog
 IPS
 EOF
                  resolvelinks
@@ -584,7 +600,9 @@ then
     echo "${Pkg} failed"
     exit 1
 fi
-if [ "`ldconfig`" = "" ]; then echo "";fi
+set +e # ldconfig might not exist yet
+ldconfig
+set -e
 fixSticky
 }
 EOF
@@ -664,16 +682,32 @@ case $Pkg in
     udev)
     cat << "EOF"
 unpack () {
+starttime=$( date +%s )
+
 ln -sf ${LFS}${sourcedir}/${Pkg}*.* .
 cd `tar vxf ${Pkg}-???.tar*z* | awk -F\/ 'END{print $1}'`
+
+endtime=$( date +%s )
+set +e
+unpacktime=$( expr $endtime - $starttime )
+set -e
+starttime=$( date +%s )
 }
 EOF
     ;;
     *)
     cat << "EOF"
 unpack () {
+starttime=$( date +%s )
+
 ln -sf ${LFS}${sourcedir}/${Pkg}*.* .
 cd `tar vxf ${Pkg}*z* | awk -F\/ 'END{print $1}'`
+
+endtime=$( date +%s )
+set +e
+unpacktime=$( expr $endtime - $starttime )
+set -e
+starttime=$( date +%s )
 }
 EOF
    ;;
@@ -754,10 +788,11 @@ case $Name in
         >> $Output
     ;;
     stripping)
-        # strip always exits with 1, wrap it up in an if to dodge bash's -e flag
+        # strip always exits with 1, so toggle  bash's -e flag
+        echo "set +e" >> $Output
         GetCommands \
-        | awk '{if (/strip/) printf "if [ \"`"$0"`\" = \"1\" ];\nthen\n    echo \""$0" done\"\nfi\n";else print $0}' \
         >> $Output
+        echo "set -e" >> $Output
     ;;
     createfiles)
         # we don't want/need to start a new shell just yet
@@ -867,6 +902,12 @@ for Chapter in chapter{05,06};do
       case $Name in
           introduction|toolchaintechnotes|generalinstructions|pkgmgt|aboutdebug)
           continue
+      ;;
+      xz)
+          # fudge
+          Name=xz-utils
+          Pkg=xz-utils
+          Function
       ;;
       changingowner|kernfs)
           Chapter=`echo $Chapter | sed s/05/06/`
