@@ -877,6 +877,11 @@ EOF
         | sed -e 's/make/make -j1/' \
         >> $Output
     ;;
+    coreutils)
+        GetCommands \
+        | sed -e '/NON_ROOT_USERNAME/,/\/dummy/d' \
+        >> $Output
+    ;;
     *)
         GetCommands \
         >> $Output
