@@ -406,8 +406,8 @@ ln -sv su-tools /tools/bin/su
 
 groupadd -g 9999 install
 # make sure pkgusers can write to the logfile
-chgrp install $Buildlog
-chmod 664 $Buildlog
+chgrp install $BuildLog
+chmod 664 $BuildLog
 
 ## Nasty workaround
 # well, at least dumb it down a little
