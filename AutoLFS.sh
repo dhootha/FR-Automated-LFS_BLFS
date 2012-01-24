@@ -252,7 +252,7 @@ for REPO in LFS BLFS;do
               if [ -e ${Dir}/$Tag/.svn/entries ];
               then
                   EntriesDate=$( stat --printf=%y ${Dir}/$Tag/.svn/entries | awk 'gsub(/-/,"") {printf $1}' )
-                  if [ "$EntriesDate" -le "$( date +%Y%m%d )" ];
+                  if [ "$EntriesDate" -ge "$( date +%Y%m%d )" ];
                   then
                       continue
                   fi
