@@ -424,7 +424,7 @@ chmod 4750 /tools/libexec/pt_chown
 cat >> /etc/pkgusr/bash_profile << "BashProfile"
 #
 complete -o default -o nospace -A user su finger pinky
-export MAKEFLAGS='-j 14'
+#export MAKEFLAGS='-j 14'
 export Pkg=$LOGNAME
 export PKGUSERS=/home/pkgusers
 if [ -e /etc/pkgusr/scripts/${LOGNAME}.sh -a ! -e ~/.${LOGNAME} ];
