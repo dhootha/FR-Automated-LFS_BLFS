@@ -535,6 +535,7 @@ fi
 
 echo "BuildLog=$BuildLog" > ${pkgscripts}/${Name}.sh
 cat >> ${pkgscripts}/${Name}.sh << "IPS"
+set +h
 Pkg=$LOGNAME
 EOF
     ;;
