@@ -298,7 +298,9 @@ for dir in $DumpedCommands ;do
         install -vd $dir
         pushd $LFS_REPO/$Tag
             #make BASEDIR=$Dumpedhtml
-            make DUMPDIR=$DumpedCommands maketar dump-commands
+            for targ in maketar dump-commands;do
+                make DUMPDIR=$DumpedCommands $targ
+            done
             #for dir in $DumpedCommands $Dumpedhtml;do
             for dir in $DumpedCommands ;do
                 echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}' > $dir/.version
@@ -335,7 +337,17 @@ pushd ${LFS}${sourcedir}
 popd
 for File in $RequiredFiles;do
     Url=$( grep $File $WgetList )
-    wget $WgetOpts -c $Url -O ${LFS}${sourcedir}/$File
+    case $File in
+       lfs-bootscripts*|udev-config*)
+           # idkw but md5sums never seem to match these
+           if [ ! -e ${LFS}${sourcedir}/$File ];
+           then
+               wget $WgetOpts -c $Url -O ${LFS}${sourcedir}/$File
+           fi;;
+        ?*)
+           wget $WgetOpts -c $Url -O ${LFS}${sourcedir}/$File
+        ;;
+     esac
     # TODO handle d/l error
 done
 # undo symlink fudge
