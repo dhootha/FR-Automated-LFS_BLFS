@@ -1,17 +1,11 @@
 #!/bin/bash
 trialrun="$1"
-book=~/BLFS/BOOK
-ENTITIES=$book/general.ent
-Output=~/BLFSscripts
-BLFSsrc=/Source
-Passwd=/etc/passwd
-#Passwd=~/fakePasswd
-wgetlist=~/public_html/blfs-book-xsl/wget-list
-commands=~/blfs-commands
+
 Header () {
 echo "#!/bin/bash" > $Output
-echo "Passwd=$Passwd" >> $Output
 cat >> $Output << "Header"
+set -e
+
 BLFSsrc=/Source
 pkgscripts=/etc/pkgusr/scripts
 GetFiles () {
@@ -122,6 +116,37 @@ Downloads="$(cat $Pkg | sed '/<!--/,/-->/d' | awk -F\" '/'$DLRule'/ && !/-->/ { 
 
 Patches="$(cat $Pkg | sed '/<!--/,/-->/d' | awk -F\" '/'$PatchRule'/&& !/-->/{print $2}' | AwkIt)"
 }
+DumpCommands () {
+eval REPODIR=\$${1}_REPO/\$${1}_SVN_TAG
+target=$( echo $1 | awk '{print tolower($1)}')
+SVNINFO="`svn info $REPODIR | awk '{printf $0"|"}'`"
+# Note, tagged | on the end so it can be used as a record separator later
+# e.g.
+#   echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}'
+# will 'reconstitute it
+SVNrevision=$( echo $SVNINFO | awk 'BEGIN{ RS = "|" };/Revision/ {print $0}' )
+for dir in $DumpedCommands ;do
+    if [ ! -d $dir ];
+    then
+        install -vd $dir
+        touch $dir/.revision
+    fi
+done
+for dir in $DumpedCommands ;do
+    if [ -e "$dir" -a "$SVNrevision" != "$( cat $dir/.revision | awk '/Revision/ {print $0}')" ];
+    then
+        rm -r $dir
+        install -vd $dir
+        pushd $REPODIR
+            make -j1 DUMPDIR=$DumpedCommands BASEDIR=$Dumpedhtml $target dump-commands
+            for dir in $DumpedCommands $Dumpedhtml;do
+                echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}' > $dir/.revision
+            done
+        popd
+        break
+    fi
+done
+}
 GetCommands () {
 for i in `find $commands -type f -name "???-${FullName}"`;do
    echo "commands () {" >> $Output
@@ -199,24 +224,33 @@ EOF
 }
 
 
+. ~/.AutoLFS.cfg
 
+BLFS_BOOK=${BLFS_REPO}/${BLFS_SVN_TAG}
+ENTITIES=$BLFS_BOOK/general.ent
+Output=$LFS/BLFSscripts.sh
+BLFSsrc=/Source
+DumpedCommands=$LFS/blfs-commands
+Dumpedhtml=$LFS/blfs-html
+
+DumpCommands BLFS
 Header
 # Trialrun is $1, which should be a package 'name', it is simply for testing
 if [ "$trialrun" == "" ];
 then
-    Pkgs=`find $book -type f -name "*.xml" `
+    Pkgs=`find $BLFS_BOOK -type f -name "*.xml" `
 else
-    Pkgs=`find $book -type f -name "${trialrun}.xml"`
+    Pkgs=`find $BLFS_BOOK -type f -name "${trialrun}.xml"`
 fi
 for Pkg in $Pkgs;do
-    Section=`dirname $Pkg | sed s@$book@@`
+    Section=`dirname $Pkg | sed s@$BLFS_BOOK@@`
     case $(basename $Section) in
        common|otherlibs|welcome)
          continue
        ;;
     esac
     FullName=`basename $Pkg .xml`
-    if [ "`find $commands -type f -name "???-${FullName}"`" = "" ];
+    if [ "`find $DumpedCommands -type f -name "???-${FullName}"`" = "" ];
     then
         continue
     fi
@@ -252,7 +286,7 @@ for Pkg in $Pkgs;do
        case $i in
            perl-*)
                # these are perl modules
-               Required="$Required PerlModule-`grep -B1 $i $book/general/prog/perl-modules.xml | awk '/<!--/{print $2}'`"
+               Required="$Required PerlModule-`grep -B1 $i $BLFS_BOOK/general/prog/perl-modules.xml | awk '/<!--/{print $2}'`"
            ;;
            *)
                Required="$Required $( echo $i | sed 's/-/_/g' )"
