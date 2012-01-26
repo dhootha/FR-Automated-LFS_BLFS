@@ -243,11 +243,10 @@ CheckoutSVN () {
 for REPO in LFS BLFS;do
     eval Dir=\$${REPO}_REPO
     eval Url=\$${REPO}_SVN_URL
-    Tag=$( basename $Url )
+    eval Tag=\$${REPO}_SVN_TAG
     case $Tag in
-        BOOK) # don't spam, once a day should be fine
+        WIP) # don't spam, once a day should be fine
               # TODO stay locked to a revision
-              Tag=WIP
               eval ${REPO}_BOOK=\$${REPO}_REPO/$Tag
               if [ -e ${Dir}/$Tag/.svn/entries ];
               then
@@ -270,40 +269,30 @@ svn co $Url ${Dir}/$Tag
 done
 }
 DumpCommands () {
-# for the moment only interested in LFS
-Tag=$( basename $LFS_SVN_URL )
-case $Tag in
-    BOOK) Tag=WIP
-    ;;
-esac
-SVNINFO="`svn info $LFS_REPO/$Tag | awk '{printf $0"|"}'`"
+eval REPODIR=\$${1}_REPO/\$${1}_SVN_TAG
+target=$( echo $1 | awk '{print tolower($1)}')
+SVNINFO="`svn info $REPODIR | awk '{printf $0"|"}'`"
 # Note, tagged | on the end so it can be used as a record separator later
 # e.g.
 #   echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}'
 # will 'reconstitute it
 SVNrevision=$( echo $SVNINFO | awk 'BEGIN{ RS = "|" };/Revision/ {print $0}' )
-#for dir in $DumpedCommands $Dumpedhtml;do
 for dir in $DumpedCommands ;do
     if [ ! -d $dir ];
     then
         install -vd $dir
-        touch $dir/.version
+        touch $dir/.revision
     fi
 done
-#for dir in $DumpedCommands $Dumpedhtml;do
 for dir in $DumpedCommands ;do
-    if [ -e "$dir" -a "$SVNrevision" != "$( cat $dir/.version | awk '/Revision/ {print $0}')" ];
+    if [ -e "$dir" -a "$SVNrevision" != "$( cat $dir/.revision | awk '/Revision/ {print $0}')" ];
     then
         rm -r $dir
         install -vd $dir
-        pushd $LFS_REPO/$Tag
-            #make BASEDIR=$Dumpedhtml
-            for targ in maketar dump-commands;do
-                make DUMPDIR=$DumpedCommands $targ
-            done
-            #for dir in $DumpedCommands $Dumpedhtml;do
-            for dir in $DumpedCommands ;do
-                echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}' > $dir/.version
+        pushd $REPODIR
+            make -j1 DUMPDIR=$DumpedCommands BASEDIR=$Dumpedhtml $target dump-commands
+            for dir in $DumpedCommands $Dumpedhtml;do
+                echo $SVNINFO | awk 'BEGIN{ RS = "|" }; {print $0}' > $dir/.revision
             done
         popd
         break
@@ -312,7 +301,7 @@ done
 }
 GetSource () {
 #TODO put this in the chapter05 Script
-make -f $LFS_REPO/$Tag/Makefile -C $LFS_REPO/$Tag BASEDIR=${LFS}${sourcedir} wget-list md5sums
+make -j1 -f $LFS_REPO/$Tag/Makefile -C $LFS_REPO/$Tag BASEDIR=${LFS}${sourcedir} wget-list md5sums
 WgetList=${LFS}${sourcedir}/wget-list
 md5sums=${LFS}${sourcedir}/md5sums
 
@@ -990,12 +979,8 @@ sed -e '/make check/d' \
     -i $LFS/chapter05.sh
 }
 
-
-
-
-
 Config
 CheckoutSVN
-DumpCommands
+DumpCommands LFS
 GetSource
 Start
