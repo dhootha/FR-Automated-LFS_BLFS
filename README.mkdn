@@ -9,14 +9,34 @@ They are not really intended for the newbie, instead they are for the seasoned l
 If you are new to linuxfromscratch , work through the book a few times before automating it
 This way you will get a much better understanding of what is installed on your system, how and why.
 
-but I will ( maybe ) document these scripts and the prerequesit steps, and I might even fix them
+but I will ( maybe ) document these scripts and the prerequisite steps, and I might even fix them
 
 NOTE these scripts target a
 http://www.linuxfromscratch.org/hints/downloads/files/more_control_and_pkg_man.txt
-package managment
+package management
+
+NOTE:
+=====
+These scripts are mostly for my fun and learning
+ATM the scripts are a bit of a mess, they evolved that way
+in my head they are version 0.08, at 0.1 I will probably re-write them
 
 CHANGELOG
 ---------
+
+2012-01-27
+----------
+
+* misc fixes
+* Started making the AutoBLFS script work better
+  BLFSscripts will still fail *a lot*
+  One problem is recursive dependency in x stuff with fop & xmlto
+  ( they are required for docs, but require x, so the script loops till seg fault )
+
+    sed -i 's/fop xmlto//' BLFSscripts.sh
+
+  'fixes' it, but I should fix it properly
+* spell checked this doc, yeah I never could spell, actually surprised at how well I did
 
 2012-01-19
 ----------
@@ -40,20 +60,30 @@ https://github.com/Firerat/FR-Automated-LFS_BLFS/issues
 
 TODO
 ----
-as of 2012-01-13
+as of 2012-01-27
 
+* add ccache , handy for total re-runs
+* add /dev/shm build dir, tbh I probably don't have enough mem on my laptop ( maxed at 4GIG ) , but it may be usefull for people on Desktops with silly mem, i.e. faster compile.. but  need to cleanup src dir
+* cleanup src dir, meh I is lazy atm I don't rm src, in te past this was good.. I run out of space then create *lots* by deleting src
+* delete src, I should do this after success, hell maybe regardless ( would cost time if trivial issue )
+* move TODO to issues, much easier, + if I'm dead it still works
+* fix a small issue with dependency resolution in BLFS scripts
+  can't quite explain it :) basically my loop tries to install all deps, but those deps may appear more than once so second{third..infinity} time round it just sits in the pkguser's shell as it won't run the install script as it is already installed.
+* run through LFS scripts a few more times to make it work
+* patch shadow to allow UpperCase in names ( or just convert all user/group names to lowercase )
+* Add a suid ldconfig hack to BLFS scripts, pkgusers can't run ldconfig, but it is needed for multi src builds (like x )
 * Add wget ( and openssl or GnuTLS-3.0.7, libidn-1.22, Perl Module HTTP::Server, Dante ) to end of chapter06 ready for BLFS
-* Log SVN revision someplace
-* Have the script do make dump-commands ( pre-cleaning old dump )
+* ~~Log SVN revision someplace~~
+* ~~Have the script do make dump-commands ( pre-cleaning old dump )~~
 * Have the more_control_and_pkg_man as an option
-* Genarate some kind of initial setup config ( for replacables in glibc, groff and chapter07 )
-* check prerequsits ( tools, headers, Envionment vars etc )
-* log timing ( SBUs ) and try to give ETAs
+* ~~Generate some kind of initial setup config ( for replacables in glibc, groff and chapter07 )~~
+* check prerequisites ( tools, headers, Environment vars etc )
+* ~~log timing~~ partially done ( SBUs ) and try to give ETAs
 * Do at least some analysis of test results
 * Randomise root password after shadow is installed
-* modulise the book tweaks ( basically move the stuff in "WriteScript ()" out of the Main script for easier maintance )
-* fix the coreutils tests when not root ( i.e. as a pkguser )
-* Other stuff I forgot or havn't thought of yet
+* modularise the book tweaks ( basically move the stuff in "WriteScript ()" out of the Main script for easier maintenance )
+* ~~fix the coreutils tests when not root ( i.e. as a pkguser )~~ cheated and removed them TODO proper fix
+* Other stuff I forgot or haven't thought of yet
 
 Contact
 =======

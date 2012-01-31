@@ -1,24 +1,43 @@
 #!/bin/bash
 trialrun="$1"
-
 Header () {
 echo "#!/bin/bash" > $Output
+echo "XORG_PREFIX=\"$XORG_PREFIX\"" >> $Output
 cat >> $Output << "Header"
 set -e
 
-BLFSsrc=/Source
+BLFSsrc=/SourceBLFS
 pkgscripts=/etc/pkgusr/scripts
 GetFiles () {
 cat << "EOF"
 GetFiles () {
-BLFSsrc=/Source
+BLFSsrc=/SourceBLFS
+loopcount=0
+for File in $Downloads;do
+   if [ "` echo $File | grep -qE "/$" ;echo $?`" = "0" ];
+   then
+       eval Mirror${loopcount}=$File
+       Downloads=`echo $Downloads | sed 's@'$File'@@'`
+       loopcount=`expr $loopcount + 1`
+   elif [ "` echo $File | grep -qE "wget$" ;echo $?`" = "0" ];
+   then
+       wget -c $File
+       Downloads=`echo $Downloads | sed 's@'$File'@@'`
+       wgetlist=`basename $File`
+   elif [ "` echo $File | grep -qE "md5$" ;echo $?`" = "0" ];
+   then
+       wget -c $File
+       Downloads=`echo $Downloads | sed 's@'$File'@@'`
+       md5list=`basename $File`
+   fi
+done
 for File in $Downloads $Patches;do
    # suppose I could grab the md5sum and test that
    if [ ! -e ${BLFSsrc}/`basename $File` ];
    then
        wget -c $File -O ${BLFSsrc}/`basename $File`
-       ln -sf ${BLFSsrc}/`basename $File` .
    fi
+   ln -sf ${BLFSsrc}/`basename $File` .
 done
 }
 EOF
@@ -26,9 +45,17 @@ EOF
 UnPack () {
 cat << "EOF"
 UnPack () {
-# bit hacky, assume that the first is our main tarball ( pretty sure it always is )
+# TODO , re-write this, for now just skip unpack if we have a wgetlist or just writing xorg config
+if [ "$wgetlist" != "" ]; then return;fi
+case $Name in
+    profile|xorg7) return;;
+esac
 Tarball=$( basename $( echo $Downloads | awk '{print $1}') )
-cd `tar vxf $Tarball | awk -F\/ 'END{print $1}'`
+ext=`echo $Tarball | awk -F\. '{print $NF}'`
+case $ext in
+    zip) cd `unzip $Tarball | awk '/:/{print $NF}' | awk -F\/ 'END{print $1}'`;;
+    ?*) cd `tar vxf $Tarball | awk -F\/ 'END{print $1}'`;;
+esac
 }
 EOF
 }
@@ -88,14 +115,7 @@ awk '{gsub(/\;/," ;",$0) gsub(/&/," &",$0)
                 sub(/">/,"");
                 print $0; }'
 }
-
-# we want to use a wget list if available
-if [ "`grep -q "ENT.*-wget" $Pkg;echo $?`" == "0" ];
-then
-    DLRule="ENT.*-wget"
-else
-    DLRule="ENT.*-download-"
-fi
+DLRule="ENT.*-download-|ENT.*-wget|ENT.*-md5sum.*md5.>$"
 PatchRule="url=.*diff|url=.*patch"
 Ents="$(for Rule in $DLRule $PatchRule;do
       cat $Pkg | sed '/<!--/,/-->/d' | awk '/'$Rule'/{gsub(/\;/," ;",$0 )
@@ -132,11 +152,10 @@ for dir in $DumpedCommands ;do
         touch $dir/.revision
     fi
 done
-for dir in $DumpedCommands ;do
+for dir in $Dumpedhtml $DumpedCommands ;do
     if [ -e "$dir" -a "$SVNrevision" != "$( cat $dir/.revision | awk '/Revision/ {print $0}')" ];
     then
-        rm -r $dir
-        install -vd $dir
+        rm -r $Dumpedhtml $DumpedCommands
         pushd $REPODIR
             make -j1 DUMPDIR=$DumpedCommands BASEDIR=$Dumpedhtml $target dump-commands
             for dir in $DumpedCommands $Dumpedhtml;do
@@ -148,37 +167,36 @@ for dir in $DumpedCommands ;do
 done
 }
 GetCommands () {
-for i in `find $commands -type f -name "???-${FullName}"`;do
+for i in `find $DumpedCommands -type f -name "???-${FullName}"`;do
    echo "commands () {" >> $Output
    echo "#Begin $i"
    case $Name in
        which)
            # the book's commands includes two solutions, full package and a script
            # For now I will kill the script version, but in future will set this up as an option
-           CustomSed="-e /cat/,/chown/d"
-       ;;
+             cat $i | sed -e '/cat/,/chown/d' ;;
        aspell)
-           # need to sort out a dictionary
+           # TODO need to sort out a dictionary
        ;;
-       unzip)
-           CustomSed="-e /This.block.must.be.edited/,/End.of.editable.block/d"
-       ;;
-       *)
-           CustomSed=""
-       ;;
+       unzip) cat $i | sed -e '/This.block.must.be.edited/,/End.of.editable.block/d' ;;
+       xorg7) cat $i | sed -e '/xc/d' ;;
+        lynx) cat $i | sed -e '/chgrp/d' ;;
+       junit) cat $i | sed -e '/AllTests/d' ;;
+         x7*) cat $i | sed -e '/.md5/ a for i in \$(grep\ -v\ ^#\ ../\$wgetlist);do\npushd \$( tar vxf \$i | awk -F\\/ '\''{print\ \$1}'\'')' \
+                           -e '/mkdir/ i set +e' \
+                           -e '/&&/d' \
+                           -e '/mkdir/ a set -e' \
+                           -e 's/ln -sv/ln -sfv/'
+              echo -e "popd\ndone";;
+  fontconfig) cat $i | sed -e 's@^install@/usr/lib/pkgusr/install@' -e 's/m755/m1775/';;
+     texlive) cat $i | sed -e 's/&&//' -e 's/>>>/>>/';;
+           *) cat $i | sed -e 's/&&//' -e '/make -C doc p/d';;
+              # TODO fix this
+              # make ps pdf requires TeX which is *Huge*
+              # eventually setup an option for it
    esac
-   cat $i \
-   | sed -e '/mencoder -dvd/,/mencoder -forceidx/d' $CustomSed \
-   | awk '{
-           sub(/swat >>/,"swat\" >>")
-           sub(/>>>/,">>")
-           if (/EDITME/ || /uudecode="no"/) sub(/^/,"#",$0)
-           if ( $NF ==  "&&" ) $NF = ""
-          ;print
-          }'
 
-
-   echo "}" >> $Output
+   echo "}"
    echo "#End $i"
 done
 }
@@ -204,6 +222,8 @@ echo "
 Name=\$LOGNAME
 Downloads=\"$Downloads\"
 Patches=\"$Patches\"
+XORG_PREFIX=$XORG_PREFIX
+XORG_CONFIG=\"--prefix=\$XORG_PREFIX --sysconfdir=/etc --mandir=\$XORG_PREFIX/share/man --localstatedir=/var\"
 " > ${pkgscripts}/${Name}.sh
 
 GetFiles >> ${pkgscripts}/${Name}.sh
@@ -224,12 +244,20 @@ EOF
 }
 
 
+
+#config (){
 . ~/.AutoLFS.cfg
 
+if [ "$XORG_PREFIX" = "" ];
+then
+    XORG_PREFIX=/usr/X11
+fi
+#}
 BLFS_BOOK=${BLFS_REPO}/${BLFS_SVN_TAG}
 ENTITIES=$BLFS_BOOK/general.ent
 Output=$LFS/BLFSscripts.sh
-BLFSsrc=/Source
+#TODO remove 'hardcoding' of BLFSsrc, probably echo it into pkgusers bash_profile
+BLFSsrc=/SourceBLFS
 DumpedCommands=$LFS/blfs-commands
 Dumpedhtml=$LFS/blfs-html
 
@@ -247,7 +275,6 @@ for Pkg in $Pkgs;do
     case $(basename $Section) in
        common|otherlibs|welcome)
          continue
-       ;;
     esac
     FullName=`basename $Pkg .xml`
     if [ "`find $DumpedCommands -type f -name "???-${FullName}"`" = "" ];
@@ -262,7 +289,7 @@ for Pkg in $Pkgs;do
            Group=$Grp
         ;;
         x)
-           Group=Xorg
+           Group=xorg
         ;;
         *)
            Group="$Name"
@@ -287,6 +314,9 @@ for Pkg in $Pkgs;do
            perl-*)
                # these are perl modules
                Required="$Required PerlModule-`grep -B1 $i $BLFS_BOOK/general/prog/perl-modules.xml | awk '/<!--/{print $2}'`"
+           ;;
+           xorg7-*)
+               Required="$Required $( echo $i | sed 's/org7-/7/' )"
            ;;
            *)
                Required="$Required $( echo $i | sed 's/-/_/g' )"
