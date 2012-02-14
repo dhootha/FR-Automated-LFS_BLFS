@@ -33,9 +33,10 @@ CHANGELOG
   One problem is recursive dependency in x stuff with fop & xmlto
   ( they are required for docs, but require x, so the script loops till seg fault )
 
-    sed -i 's/fop xmlto//' BLFSscripts.sh
+        sed -i 's/fop xmlto//' BLFSscripts.sh
 
-  'fixes' it, but I should fix it properly
+    'fixes' it, but I should fix it properly
+
 * spell checked this doc, yeah I never could spell, actually surprised at how well I did
 
 2012-01-19
